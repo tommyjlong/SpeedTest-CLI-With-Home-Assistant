@@ -30,9 +30,21 @@ Follow the instructions for having HA generate a "Long-Lived Access Token".  As 
 
 * Goto the OOKLA site mentioned above and get one of the Linux binaries that will run on your system.  You can usually find out by typing in your linux shell: `$uname -m`  which should return something like `x86_64`.  Download that tar file and extract its binary and put it into this same directory (ex. `shell_commands`).  Rename the binary `speedtest.bin` as a recommendation.
 
-* Execute the binary by typing `$ ./speedtest.bin`.  You will get prompted to accept the EULA.  Once accpeted, it will store a file away that will allow it to remember this so that next time you won't be prompted again.  It will continue to run and automatically pick a nearby OOKLA server and provide textual results.  The binary is now useable by the python code.
+* Execute the binary by typing `$ ./speedtest.bin`.  You will get prompted to accept the EULA.  Once accepted, it will store a file away that will allow it to remember this so that next time you won't be prompted again.  It will continue to run and automatically pick a nearby OOKLA server and provide textual results.  The binary is now useable by the python code.
 
 You can now test this scheme to see if it works by typing `$ ./launch_speed_test.sh`.  After around a minute, check HA's speedtest sensors to see if they were updated.  If this does not work, then go into the python file and set the `DEBUG` to 1, and `CONSOLE` to 1, then type `$ ./speedtest-cli-2ha.py`.  This will run the speedtest and provide debug information to get ideas of what the problem is.
+
+### Note to users running Home Assistant in a Docker container 
+Regarding the file that speedtest.bin writes to after accepting the EULA, this file will get removed on the next HA upgrade causing the user to have to re-run speedtest.bin by hand in order to accept the EULA.  If the EULA is acceptable, one can avoid this problem by changing the following lines to the `speedtest-cli-2ha.py` <br/>
+From:
+```
+process = subprocess.Popen([SPEEDTEST_PATH,'--format=json','--precision=4',speed_test_server_id],
+```
+To:
+```
+process = subprocess.Popen([SPEEDTEST_PATH,'--format=json','--precision=4', '--accept-license', '--accept-gdpr', speed_test_server_id],
+```
+
 ## HA Automation
 * Configure a shell command in your configuration.yaml file:
 ```
