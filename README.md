@@ -26,7 +26,7 @@ Note: HA provides a native service `sensor.update_speedtest` that is used to run
 Follow the instructions for having HA generate a "Long-Lived Access Token".  As of this writting, this is done by going to the User profile and going to the card "Long-Lived Access Token" and clicking "CREATE TOKEN".  A Popup should show you the newly generated token (you can give it some friendly name).  It is required that you copy this token as it will be used later in the python file.
 
 ## Setup Your Downloaded Github Files
-* Create a directory in you Home Assistant configuration directory, for example named `shell_commands` (which is the default for this project) and copy the `launch_speed_test.sh` and `speedtest-cli-2ha.py` to this directory.  Use a text editor and edit the `speedtest-cli-2ha.py` and fill out the information according to the instructions within this file.
+* Create a directory in you Home Assistant configuration directory, for example named `shell_commands` (which is the default for this project) and copy the `launch_speed_test.sh` and `speedtest-cli-2ha.py` to this directory.  Use a text editor and edit the `speedtest-cli-2ha.py` and fill out the information according to the instructions within this file.  Also, you may need to edit the `launch_speed_test.sh` file to specify the HA config directory path and or Python3 path.
 
 * Goto the OOKLA site mentioned above and get one of the Linux binaries that will run on your system.  You can usually find out by typing in your linux shell: `$uname -m`  which should return something like `x86_64`.  Download that tar file and extract its binary and put it into this same directory (ex. `shell_commands`).  Rename the binary `speedtest.bin`.  If you are running Home Assistant with HassOS, you can do some of this with combinations of the Terminal and SSH add-on and the Samba add-on.
 
@@ -60,7 +60,7 @@ This will provide a service called `shell_command.launch_speedtest_cli`.
 From the GUI goto Developers->Services and select `shell_command.launch_speedtest_cli` and press the button.
 After less than a minute, check HA's speedtest sensors to see if they were updated.  
 
-If the sensor did not update, then there may be problems with the file pathnames. To debug this, add the following line to the launch_speedtest_cli.sh:
+If the sensor did not update, then there may be problems with the file pathnames. To debug this, add the following line to the `launch_speedtest_cli.sh`:
 ```
 echo $SHELL_PATH >> my_test_file
 ```
