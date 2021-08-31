@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import requests
@@ -11,19 +10,17 @@ import sys
 
 ##################################
 # Instructions:
-# HASERVER - URL (http:port or https:port of your Home Assistant).  Leave quotes as is.
+# AUTHKEY -  Create a permanent key in HA and use here it
+# HASERVER - URL (http:port or https:port of your Home Assistant. Leave quotes as is.
 # SPEEDTEST_SERVERID - the speedtest server ID of your desired server, 
-#   or leave as is and speedtest will find one.  Leave quotes as is.
-#   Note if the id is incorrect or no longer in-service,  this will throw error:
-#    "json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)"
-# SPEEDTEST_PATH - The full filename/path to the speedtest.bin file.  Leave quotes as is.
-# AUTHKEY -  Create a permanent key in HA and use here it. Leave quotes as is.
+#   or leave as is and speedtest will find one.
+# SPEEDTEST_PATH - The full filename/path to the speedtest.bin file. LEAVE AS IS.
 # 
 # Use your existing speedtest integration from HA, but set 
 #   manual: true 
 # and use an automation to run this.
 # Alternatively, this code will autocreate the same sensors
-# but these sensrs will not live after a reboot.
+# but they will not live after a reboot.
 # 
 # This will update the following sensors:
 #   sensor.speedtest_download
@@ -33,16 +30,16 @@ import sys
 ##################################
 
 # Configuration
-HASERVER = "" #no backslash at the end.
+HASERVER = "" #Home assistant server (no backslash at the end).
 SPEEDTEST_SERVERID = ''
-SPEEDTEST_PATH = ''
+SPEEDTEST_PATH = sys.argv[1] + '/' + 'speedtest.bin'
 
 # Your HA's long lived token for this:
 AUTHKEY = "YOUR_HA_AUTH_TOKEN_HERE_IN_QUOTES"
 
 # Setup Logger 
 DEBUG   = 0 #set to 1 to get debug information.
-CONSOLE = 0 #set to 1 to send debug output to stdout, 0 to local syslog
+CONSOLE = 0 #set to 1 to send output to stdout, 0 to local syslog
 
 _LOGGER = logging.getLogger(__name__)
 if CONSOLE:
@@ -124,7 +121,12 @@ if SPEEDTEST_SERVERID == '':
 else:
   speed_test_server_id = '--server-id=' + SPEEDTEST_SERVERID
 
-process = subprocess.Popen([SPEEDTEST_PATH,'--format=json','--precision=4',speed_test_server_id],
+process = subprocess.Popen([SPEEDTEST_PATH,
+                     '--format=json',
+                     '--precision=4',
+                     '--accept-license',
+                     '--accept-gdpr',
+                     speed_test_server_id],
                      stdout=subprocess.PIPE,
                      stderr=subprocess.PIPE,
                      universal_newlines=True)
