@@ -136,8 +136,8 @@ _LOGGER.debug('Stderr: %s', stderr)
 
 # Speed Test Results - (from returned JSON string)
 st_results = json.loads(stdout)
-down_load_speed = st_results["download"]["bandwidth"]*8/1000000
-up_load_speed = st_results["upload"]["bandwidth"]*8/1000000
+down_load_speed = round(st_results["download"]["bandwidth"]*8/1000000, 2)
+up_load_speed = round(st_results["upload"]["bandwidth"]*8/1000000, 2)
 ping_latency = st_results["ping"]["latency"]
 isp = st_results["isp"]
 server_name = st_results["server"]["name"]
