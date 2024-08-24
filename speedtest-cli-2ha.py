@@ -27,12 +27,18 @@ import sys
 #   sensor.speedtest_ping
 #   sensor.speedtest_upload
 # 
+# Long Term Statistics - When a sensor has the attribute 'state_class = measurement',
+#   HA will store SpeedTest's sensor state in its 'Statistics Table'
+#   The Statistics Table is never purged, so there is an option to
+#   to not store SpeedTest sensor state in the Statistics Table if one doesn't need it,
+#   by setting INCLUDE_LTS to 0.
 ##################################
 
 # Configuration
 HASERVER = "" #Home assistant server (no backslash at the end).
 SPEEDTEST_SERVERID = ''
 SPEEDTEST_PATH = sys.argv[1] + '/' + 'speedtest.bin'
+INCLUDE_LTS = 1 #set to 1 to enable HA Long Term Statistics. 0 to disable.
 
 # Your HA's long lived token for this:
 AUTHKEY = "YOUR_HA_AUTH_TOKEN_HERE_IN_QUOTES"
@@ -62,14 +68,11 @@ if DEBUG:
 else:
   _LOGGER.setLevel(logging.NOTSET)
 
-def HAPost(sensorname,state,unitmeasure,friendlyname,icon):
+def HAPost(sensorname, state, attributes):
     """Method handling sending POST to home assistant api"""
     url = HASERVER + '/api/states/sensor.' + 'speedtest_' + sensorname
     headers = {'Authorization': 'Bearer ' + AUTHKEY,
                'content-type': 'application/json'}
-    attributes = {"unit_of_measurement":unitmeasure,
-                  "friendly_name":friendlyname,
-                  "icon":icon}
     data = {'state':state, 'attributes':attributes}
 
     try:
@@ -137,10 +140,14 @@ _LOGGER.debug('Stderr: %s', stderr)
 # Speed Test Results - (from returned JSON string)
 st_results = json.loads(stdout)
 down_load_speed = round(st_results["download"]["bandwidth"]*8/1000000, 2)
+down_load_bytes_received = st_results["download"]["bytes"]
 up_load_speed = round(st_results["upload"]["bandwidth"]*8/1000000, 2)
+up_load_bytes_sent = st_results["upload"]["bytes"]
 ping_latency = st_results["ping"]["latency"]
 isp = st_results["isp"]
 server_name = st_results["server"]["name"]
+server_country = st_results["server"]["country"]
+server_id = st_results["server"]["id"]
 url_result = st_results["result"]["url"]
 
 _LOGGER.info('Downstream BW: %s',down_load_speed)
@@ -148,12 +155,52 @@ _LOGGER.info('Upstram BW: %s',up_load_speed)
 _LOGGER.info('Ping Latency: %s', ping_latency)
 _LOGGER.info('ISP: %s', isp)
 _LOGGER.info('Server name: %s',server_name)
+_LOGGER.info('Server country: %s',server_country)
+_LOGGER.info('Server id: %s',server_id)
 _LOGGER.info('URL results: %s',url_result)
 _LOGGER.info('---------------------------------')
 
 _LOGGER.debug('Posting to HA SpeedTest Sensors')
-ret1 = HAPost("download",down_load_speed,"Mbit/s","Speedtest Download","mdi:speedometer")
-ret2 = HAPost("upload",up_load_speed,"Mbit/s","Speedtest Upload","mdi:speedometer")
-ret3 = HAPost("ping",ping_latency,"ms","Speedtest Ping","mdi:speedometer")
+
+#Setup Download Attributes, then POST to HA
+download_attribs = {\
+                 "attribution": "Data retrieved from Speedtest.net by Ookla",
+                 "unit_of_measurement": "Mbit/s",
+                 "device_class": "data_rate",
+                 "friendly_name": "SpeedTest Download",
+                 "server_name": server_name,
+                 "server_country": server_country,
+                 "server_id": server_id,
+                 "bytes_received": down_load_bytes_received}
+if INCLUDE_LTS:
+  download_attribs["state_class"] = "measurement"
+ret1 = HAPost("download", down_load_speed, download_attribs)
+
+#Setup Upload Attributes, then POST to HA
+upload_attribs = {\
+               "attribution": "Data retrieved from Speedtest.net by Ookla",
+               "unit_of_measurement": "Mbit/s",
+               "device_class": "data_rate",
+               "friendly_name": "SpeedTest Upload",
+               "server_name": server_name,
+               "server_country": server_country,
+               "server_id": server_id,
+               "bytes_sent": up_load_bytes_sent }
+if INCLUDE_LTS:
+  upload_attribs["state_class"] = "measurement"
+ret2 = HAPost("upload", up_load_speed, upload_attribs)
+
+#Setup Ping Attributes
+ping_attribs = {\
+             "attribution": "Data retrieved from Speedtest.net by Ookla",
+             "unit_of_measurement": "ms",
+             "device_class": "duration",
+             "friendly_name": "SpeedTest Ping",
+             "server_name": server_name,
+             "server_country": server_country,
+             "server_id": server_id}
+if INCLUDE_LTS:
+  ping_attribs["state_class"] = "measurement"
+ret3 = HAPost("ping", ping_latency, ping_attribs)
 _LOGGER.debug('Return code from POST Method calls %s %s %s', ret1, ret2, ret3)
 

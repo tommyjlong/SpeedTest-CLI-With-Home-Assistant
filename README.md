@@ -13,14 +13,14 @@ Note: There are other ways for HA to run the Speedtest-CLI binary such as the on
 # Instructions
 ## Home Assistant 
 ### Home Assistant Speedtest Dot Net
-Setup the Speedtest dot net integration in HA and configure the manual mode to TRUE.  Restart HA, and check the Developer's Tools where you should see 3 sensors:
+Setup the Speedtest dot net integration in HA and configure it to run in manual mode.  To do this, go to the Speedtest.net Integration, and click on the 3-dots and disable the "Enable polling for updates".  Restart HA, and check the Developer's Tools where you should see 3 sensors:
 * `sensor.speedtest_download`
 * `sensor.speedtest_ping`
 * `sensor.speedtest_upload`
 
-Manual mode is required (If you use the GUI check "Disable auto-update").  This prevents the integration from running its own version of speedtest and subsequently prevents it from updating these sensors itself.
+Note: in Manual mode the integration will no longer auto-run periodically and subsequently prevents it from updating these sensors itself.  The exception is that when the Speedtest.net integration first starts up, it will always perform its version of a speedtest.
 
-Note: HA provides a native service `sensor.update_speedtest` that is used to run the third-party speedtest-cli.  This service is not to be used along with this project.  Instead you will be able to use shell command service called 'launch_speedtest_cli'.
+Note: HA provides a native "action" (formerly "service") that is called `homeassistant.update_entity` that can be used to have the integration perform its own speedtest on demand.  This action is not to be used with this project.  Instead you will be able to use a shell command action/service called 'launch_speedtest_cli'.
 
 ### Home Assistant Token Generation
 Follow the instructions for having HA generate a "Long-Lived Access Token".  As of this writting, this is done by going to the User profile and going to the card "Long-Lived Access Token" and clicking "CREATE TOKEN".  A Popup should show you the newly generated token (you can give it some friendly name).  It is required that you copy this token as it will be used later in the python file.
@@ -51,13 +51,14 @@ shell_command: #Starting 0.114, command timesout after 60s.
 ```
 This will provide a service called `shell_command.launch_speedtest_cli`.
 
-* Setup the HA automation itself and use the following action:
+* Setup the HA automation itself and use the following `action` (formerly `service`):
 ```
-    action:
-      - service: shell_command.launch_speedtest_cli
+action:
+  - data: {}
+    action: shell_command.launch_speedtest_cli
 ```
 ## Testing and Debugging
-From the GUI goto Developers->Services and select `shell_command.launch_speedtest_cli` and press the button.
+From the GUI goto Developers->Actions and select `shell_command.launch_speedtest_cli` and press the button.
 After less than a minute, check HA's speedtest sensors to see if they were updated.  
 
 If the sensor did not update, then there may be problems with the file pathnames. To debug this, add the following line to the `launch_speedtest_cli.sh`:
@@ -68,6 +69,6 @@ include the full path name of my_test_file so you will know where to find it.  R
 	
 If this still doesn't work, then one will need to execute the python code directly. If you are using Home Assistant with HassOS or inside a Docker container, you will have to get inside the homeassistant container itself.
 
-Go into the python file and set the `DEBUG` to 1, and `CONSOLE` to 1, then type `$ ./speedtest-cli-2ha.py`.  This will run the speedtest and provide debug information to get ideas of what the problem is.  
+Go into the python file and set the `DEBUG` to 1, and `CONSOLE` to 1, then type `./speedtest-cli-2ha.py`.  This will run the speedtest and provide debug information to get ideas of what the problem is.  
 
-If this works and the sensors are updated, we know the Python code setup is OK.  Next type `$ ./launch_speed_test.sh` and see if there are any problems with it. 
+If this works and the sensors are updated, we know the Python code setup is OK.  Next type `./launch_speed_test.sh` and see if there are any problems with it. 
