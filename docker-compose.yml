@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  speedtest:
+    build: .
+    container_name: speedtest-ha
+    environment:
+      - HA_SERVER=${HA_SERVER}
+      - HA_AUTH_KEY=${HA_AUTH_KEY}
+      - SPEEDTEST_SERVER_ID=${SPEEDTEST_SERVER_ID} # (optional) get from https://www.speedtest.net/speedtest-servers-static.php or https://www.speedtest.net/api/embed/vz0azjarf5enop8a/config
+      - INCLUDE_LTS=${INCLUDE_LTS} # set to 1 to enable HA Long Term Statistics. 0 to disable.
+      - SENSOR_DOWNLOAD=${SENSOR_DOWNLOAD} # sensor suffix, will be "sensors.speedtest_{SENSOR_DOWNLOAD}"
+      - SENSOR_UPLOAD=${SENSOR_UPLOAD} # sensor suffix, will be "sensors.speedtest_{SENSOR_UPLOAD}"
+      - SENSOR_PING=${SENSOR_PING} # sensor suffix, will be "sensors.speedtest_{SENSOR_PING}"
+      - DEBUG=${DEBUG:-1} # set to 1 to enable debug logging
+      - CONSOLE=${CONSOLE:-1} # set to 1 to send output to stdout, 0 to local syslog
+      - CRON_SCHEDULE=${CRON_SCHEDULE:-"*/60 * * * *"} # Default to every 60 minutes
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro  # Sync container time with host

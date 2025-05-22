@@ -4,49 +4,40 @@ import requests
 import subprocess
 import json
 import logging
-import logging.handlers #Needed for Syslog
+import logging.handlers
 import sys
+import os
+from typing import Dict, Any
+from dotenv import load_dotenv
 
+# Load environment variables
+load_dotenv()
 
 ##################################
-# Instructions:
-# AUTHKEY -  Create a permanent key in HA and use here it
-# HASERVER - URL (http:port or https:port of your Home Assistant. Leave quotes as is.
-# SPEEDTEST_SERVERID - the speedtest server ID of your desired server, 
-#   or leave as is and speedtest will find one.
-# SPEEDTEST_PATH - The full filename/path to the speedtest.bin file. LEAVE AS IS.
-# 
-# Use your existing speedtest integration from HA, but set 
-#   manual: true 
-# and use an automation to run this.
-# Alternatively, this code will autocreate the same sensors
-# but they will not live after a reboot.
-# 
-# This will update the following sensors:
-#   sensor.speedtest_download
-#   sensor.speedtest_ping
-#   sensor.speedtest_upload
-# 
-# Long Term Statistics - When a sensor has the attribute 'state_class = measurement',
-#   HA will store SpeedTest's sensor state in its 'Statistics Table'
-#   The Statistics Table is never purged, so there is an option to
-#   to not store SpeedTest sensor state in the Statistics Table if one doesn't need it,
-#   by setting INCLUDE_LTS to 0.
-##################################
+# Configuration from environment variables
+HASERVER = os.getenv('HA_SERVER', 'http://localhost:8123')
+AUTHKEY = os.getenv('HA_AUTH_KEY', '')
+SPEEDTEST_SERVERID = os.getenv('SPEEDTEST_SERVER_ID', '')
+INCLUDE_LTS = int(os.getenv('INCLUDE_LTS', '1'))
 
-# Configuration
-HASERVER = "" #Home assistant server (no backslash at the end).
-SPEEDTEST_SERVERID = ''
-SPEEDTEST_PATH = sys.argv[1] + '/' + 'speedtest.bin'
-INCLUDE_LTS = 1 #set to 1 to enable HA Long Term Statistics. 0 to disable.
+# Sensor names configuration
+SENSOR_DOWNLOAD = os.getenv('SENSOR_DOWNLOAD', 'download')
+SENSOR_UPLOAD = os.getenv('SENSOR_UPLOAD', 'upload')
+SENSOR_PING = os.getenv('SENSOR_PING', 'ping')
 
-# Your HA's long lived token for this:
-AUTHKEY = "YOUR_HA_AUTH_TOKEN_HERE_IN_QUOTES"
+# Friendly names configuration
+SENSOR_DOWNLOAD_NAME = os.getenv('SENSOR_DOWNLOAD_NAME', f'SpeedTest {SENSOR_DOWNLOAD.capitalize()}')
+SENSOR_UPLOAD_NAME = os.getenv('SENSOR_UPLOAD_NAME', f'SpeedTest {SENSOR_UPLOAD.capitalize()}')
+SENSOR_PING_NAME = os.getenv('SENSOR_PING_NAME', f'SpeedTest {SENSOR_PING.capitalize()}')
+
+# Speedtest binary path - in Docker this will be just 'speedtest'
+SPEEDTEST_PATH = os.getenv('SPEEDTEST_PATH', '/usr/bin/speedtest')
+
+# Debug configuration
+DEBUG = int(os.getenv('DEBUG', '0'))
+CONSOLE = int(os.getenv('CONSOLE', '1'))
 
 # Setup Logger 
-DEBUG   = 0 #set to 1 to get debug information.
-CONSOLE = 0 #set to 1 to send output to stdout, 0 to local syslog
-
 _LOGGER = logging.getLogger(__name__)
 if CONSOLE:
     formatter = \
@@ -120,9 +111,9 @@ def HAPost(sensorname, state, attributes):
 # Run Speedtest
 _LOGGER.debug('Running Speedtest')
 if SPEEDTEST_SERVERID == '':
-  speed_test_server_id=''
+    speed_test_server_id=''
 else:
-  speed_test_server_id = '--server-id=' + SPEEDTEST_SERVERID
+    speed_test_server_id = '--server-id=' + SPEEDTEST_SERVERID
 
 process = subprocess.Popen([SPEEDTEST_PATH,
                      '--format=json',
@@ -163,44 +154,44 @@ _LOGGER.info('---------------------------------')
 _LOGGER.debug('Posting to HA SpeedTest Sensors')
 
 #Setup Download Attributes, then POST to HA
-download_attribs = {\
+download_attribs = {
                  "attribution": "Data retrieved from Speedtest.net by Ookla",
                  "unit_of_measurement": "Mbit/s",
                  "device_class": "data_rate",
-                 "friendly_name": "SpeedTest Download",
+                 "friendly_name": SENSOR_DOWNLOAD_NAME,
                  "server_name": server_name,
                  "server_country": server_country,
                  "server_id": server_id,
                  "bytes_received": down_load_bytes_received}
 if INCLUDE_LTS:
-  download_attribs["state_class"] = "measurement"
-ret1 = HAPost("download", down_load_speed, download_attribs)
+    download_attribs["state_class"] = "measurement"
+ret1 = HAPost(SENSOR_DOWNLOAD, down_load_speed, download_attribs)
 
 #Setup Upload Attributes, then POST to HA
-upload_attribs = {\
+upload_attribs = {
                "attribution": "Data retrieved from Speedtest.net by Ookla",
                "unit_of_measurement": "Mbit/s",
                "device_class": "data_rate",
-               "friendly_name": "SpeedTest Upload",
+               "friendly_name": SENSOR_UPLOAD_NAME,
                "server_name": server_name,
                "server_country": server_country,
                "server_id": server_id,
                "bytes_sent": up_load_bytes_sent }
 if INCLUDE_LTS:
-  upload_attribs["state_class"] = "measurement"
-ret2 = HAPost("upload", up_load_speed, upload_attribs)
+    upload_attribs["state_class"] = "measurement"
+ret2 = HAPost(SENSOR_UPLOAD, up_load_speed, upload_attribs)
 
 #Setup Ping Attributes
-ping_attribs = {\
+ping_attribs = {
              "attribution": "Data retrieved from Speedtest.net by Ookla",
              "unit_of_measurement": "ms",
              "device_class": "duration",
-             "friendly_name": "SpeedTest Ping",
+             "friendly_name": SENSOR_PING_NAME,
              "server_name": server_name,
              "server_country": server_country,
              "server_id": server_id}
 if INCLUDE_LTS:
-  ping_attribs["state_class"] = "measurement"
-ret3 = HAPost("ping", ping_latency, ping_attribs)
+    ping_attribs["state_class"] = "measurement"
+ret3 = HAPost(SENSOR_PING, ping_latency, ping_attribs)
 _LOGGER.debug('Return code from POST Method calls %s %s %s', ret1, ret2, ret3)
 
