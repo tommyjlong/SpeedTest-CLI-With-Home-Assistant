@@ -20,7 +20,7 @@ version: '3.8'
 
 services:
   speedtest:
-    image: ghcr.io/felipemarinho97/speedtest-cli-with-home-assistant:master
+    image: ghcr.io/tommyjlong/speedtest-cli-with-home-assistant:master
     container_name: speedtest-ha
     environment:
       - HA_SERVER=http://localhost:8123 # Replace with your Home Assistant URL
