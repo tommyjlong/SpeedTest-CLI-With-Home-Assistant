@@ -1,74 +1,80 @@
 # SpeedTest To Home Assistant
-This project provides a way for Home Assistant to run the OKLA official `speedtest.net` binary (binary running on Linux) using an automation.  It consists of the following:
-* Home Assistant running its native [Speedtest.net integration](https://www.home-assistant.io/integrations/speedtestdotnet/) in manual mode.
-* OKLA [Speedtest-cli binary](https://www.speedtest.net/apps/cli)
-* Python Code to launch the Speedtest-cli binary, receive the results, parse them, and post the results to HA using their token based API.
-* A Shell script to launch the Python code.
-* A Home Assistant automation to call the shell script.
 
-Background - Home Assistant provides a native SpeedTest integration which uses a [third party Python code](https://github.com/sivel/speedtest-cli) to run the actual tests.  The third party code attempts to mimic the official speedtest-cli but the test results of the third party code does not always reflect that of the official speedtest-cli.  
+This project provides a way for Home Assistant to run the official `speedtest.net` binary using either Docker Compose or manual installation. It integrates with Home Assistant to provide accurate speed test measurements using the official Speedtest CLI.
 
-Note: There are other ways for HA to run the Speedtest-CLI binary such as the one provided by the Home Assistant Community Forum [here](https://community.home-assistant.io/t/add-the-official-speedtest-cli/161915/15).
+## Table of Contents
+- [Quick Start with Docker Compose](#quick-start-with-docker-compose)
+- [Manual Installation](#manual-installation)
+- [Home Assistant Configuration](#home-assistant-configuration)
+- [Testing and Debugging](#testing-and-debugging)
 
-# Instructions
-## Home Assistant 
-### Home Assistant Speedtest Dot Net
-Setup the Speedtest dot net integration in HA and configure it to run in manual mode.  To do this, go to the Speedtest.net Integration, and click on the 3-dots and disable the "Enable polling for updates".  Restart HA, and check the Developer's Tools where you should see 3 sensors:
-* `sensor.speedtest_download`
-* `sensor.speedtest_ping`
-* `sensor.speedtest_upload`
+## Quick Start with Docker Compose
 
-Note: in Manual mode the integration will no longer auto-run periodically and subsequently prevents it from updating these sensors itself.  The exception is that when the Speedtest.net integration first starts up, it will always perform its version of a speedtest.
+The easiest way to get started is using Docker Compose. Make sure you have Docker and Docker Compose installed on your system.
 
-Note: HA provides a native "action" (formerly "service") that is called `homeassistant.update_entity` that can be used to have the integration perform its own speedtest on demand.  This action is not to be used with this project.  Instead you will be able to use a shell command action/service called 'launch_speedtest_cli'.
+### Steps:
+1. Use the following `docker-compose.yml`:
 
-### Home Assistant Token Generation
-Follow the instructions for having HA generate a "Long-Lived Access Token".  As of this writting, this is done by going to the User profile and going to the card "Long-Lived Access Token" and clicking "CREATE TOKEN".  A Popup should show you the newly generated token (you can give it some friendly name).  It is required that you copy this token as it will be used later in the python file.
+```yaml
+version: '3.8'
 
-## Setup Your Downloaded Github Files
-* Create a directory in you Home Assistant configuration directory, for example named `shell_commands` (which is the default for this project) and copy the `launch_speed_test.sh` and `speedtest-cli-2ha.py` to this directory.  Use a text editor and edit the `speedtest-cli-2ha.py` and fill out the information according to the instructions within this file.  Also, you may need to edit the `launch_speed_test.sh` file to specify the HA config directory path and or Python3 path.
-
-* Goto the OOKLA site mentioned above and get one of the Linux binaries that will run on your system.  You can usually find out by typing in your linux shell: `$uname -m`  which should return something like `x86_64`.  Download that tar file and extract its binary and put it into this same directory (ex. `shell_commands`).  Rename the binary `speedtest.bin`.  If you are running Home Assistant with HassOS, you can do some of this with combinations of the Terminal and SSH add-on and the Samba add-on.
-
-* Accept the Speedtest-CLI EULA. 
-  * Method I - Accept the EULA by executing the binary by typing `$ ./speedtest.bin`.  You will get prompted to accept the EULA.  Once accepted, it will store a file away that will allow it to remember this so that next time you won't be prompted again.  It will continue to run and automatically pick a nearby OOKLA server and provide textual results.  The binary is now useable by the python code.
-  * Method II - There can be however a problem with this. The file that speedtest.bin writes to after accepting the EULA gets written to the user's home direcotry and  this file may get removed on the next HA upgrade (if using containers) causing the user to have to re-run speedtest.bin by hand in order to accept the EULA.  A preferred alternative is to read the [EULA on-line](https://www.speedtest.net/about/eula) and if the EULA is acceptable, then change the following lines inside the `speedtest-cli-2ha.py` <br/>
-
-From:
-```
-process = subprocess.Popen([SPEEDTEST_PATH,'--format=json','--precision=4',speed_test_server_id],
-```
-To:
-```
-process = subprocess.Popen([SPEEDTEST_PATH,'--format=json','--precision=4', '--accept-license', '--accept-gdpr', speed_test_server_id],
+services:
+  speedtest:
+    image: ghcr.io/felipemarinho97/speedtest-cli-with-home-assistant:master
+    container_name: speedtest-ha
+    environment:
+      - HA_SERVER=http://localhost:8123 # Replace with your Home Assistant URL
+      - HA_AUTH_KEY=my-token # Replace with your Home Assistant Long-Lived Access Token
+      - CRON_SCHEDULE=${CRON_SCHEDULE:-"*/60 * * * *"} # Default to every hour
+      - SENSOR_DOWNLOAD=${SENSOR_DOWNLOAD} # will be to sensor.speedtest_${SENSOR_DOWNLOAD}
+      - SENSOR_UPLOAD=${SENSOR_UPLOAD} # will be to sensor.speedtest_${SENSOR_UPLOAD}
+      - SENSOR_PING=${SENSOR_PING} # will be to sensor.speedtest_${SENSOR_PING}
+      # - SPEEDTEST_SERVER_ID=
+      # - INCLUDE_LTS=
+    restart: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro  # Sync container time with host
 ```
 
-## HA Configuration and Automation
-* Configure a shell command in your configuration.yaml file:
-```
-shell_command: #Starting 0.114, command timesout after 60s.
-  launch_speedtest_cli: CONFIG-PATH-TO/shell_commands/launch_speed_test.sh
-```
-This will provide a service called `shell_command.launch_speedtest_cli`.
+2. Start the container with:
 
-* Setup the HA automation itself and use the following `action` (formerly `service`):
+```bash
+docker compose up -d
 ```
-action:
-  - data: {}
-    action: shell_command.launch_speedtest_cli
-```
+
+## Manual Installation
+
+If you prefer to set up manually, follow these steps:
+
+1. **Download the Speedtest CLI Binary**:
+   - Visit the [Speedtest CLI website](https://www.speedtest.net/apps/cli) and download the appropriate binary for your system.
+   - Place the binary in your desired directory and ensure it is executable.
+
+2. **Prepare the Python Script**:
+   - Copy the `speedtest-cli-2ha.py` file to your desired directory.
+   - Edit the file to configure the environment variables (e.g., `HA_SERVER`, `HA_AUTH_KEY`).
+
+3. **Accept the Speedtest CLI EULA**:
+   - Run the binary manually to accept the EULA, or modify the Python script to include the `--accept-license` and `--accept-gdpr` flags.
+
+4. **Run the Script**:
+   - Execute the Python script to test the integration.
+
+## Home Assistant Configuration
+
+1. **Setup the Speedtest Integration**:
+   - Install the native [Speedtest.net integration](https://www.home-assistant.io/integrations/speedtestdotnet/) in Home Assistant.
+   - Configure it to run in manual mode by disabling "Enable polling for updates" in the integration settings.
+
+2. **Generate a Long-Lived Access Token**:
+   - Go to your Home Assistant user profile and create a "Long-Lived Access Token". Copy the token and use it in the Python script.
+
 ## Testing and Debugging
-From the GUI goto Developers->Actions and select `shell_command.launch_speedtest_cli` and press the button.
-After less than a minute, check HA's speedtest sensors to see if they were updated.  
 
-If the sensor did not update, then there may be problems with the file pathnames. To debug this, add the following line to the `launch_speedtest_cli.sh`:
-```
-echo $SHELL_PATH >> my_test_file
-```
-include the full path name of my_test_file so you will know where to find it.  Repeat the above test from the developer's service.  Read the contents of the `my_test_file` to see what the pathname is and make corrections to the pathnames in the speedtest-cli-2ha.py (and remove the echo $SHELL_PATH line you added earlier from the launch_speedtest_cli.sh file).
-	
-If this still doesn't work, then one will need to execute the python code directly. If you are using Home Assistant with HassOS or inside a Docker container, you will have to get inside the homeassistant container itself.
+1. **Debugging**:
+   - Set `DEBUG=1` and `CONSOLE=1` in the Python script to enable detailed logging.
+   - Run the script manually to verify the output and identify any issues.
 
-Go into the python file and set the `DEBUG` to 1, and `CONSOLE` to 1, then type `./speedtest-cli-2ha.py`.  This will run the speedtest and provide debug information to get ideas of what the problem is.  
-
-If this works and the sensors are updated, we know the Python code setup is OK.  Next type `./launch_speed_test.sh` and see if there are any problems with it. 
+## Notes
+- Ensure the Speedtest CLI binary is accessible and executable by the script.
+- Use the logs to troubleshoot any issues with the integration or script execution.
