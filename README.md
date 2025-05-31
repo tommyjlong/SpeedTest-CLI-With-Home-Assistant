@@ -8,7 +8,9 @@ This project provides a way for Home Assistant to run the OKLA official `speedte
 
 Background - Home Assistant provides a native SpeedTest integration which uses a [third party Python code](https://github.com/sivel/speedtest-cli) to run the actual tests.  The third party code attempts to mimic the official speedtest-cli but the test results of the third party code does not always reflect that of the official speedtest-cli.  
 
-Note: There are other ways for HA to run the Speedtest-CLI binary such as the one provided by the Home Assistant Community Forum [here](https://community.home-assistant.io/t/add-the-official-speedtest-cli/161915/15).
+Note: There is a Docker container version of this (forked) repository, provided by [Felipe Marinho](https://github.com/felipemarinho97/SpeedTest-CLI-With-Home-Assistant).
+</br>Note: There is also a community AddOn provided by [André Cirne](https://github.com/MrSuicideParrot/hassio-speedtest-addon) that takes a similar approach (but uses bash).
+</br>Note: The Home Assistant Community Forum mentions other ways for HA to run the Speedtest-CLI binary such as those in: [Add the official speedtest-cli](https://community.home-assistant.io/t/add-the-official-speedtest-cli/161915/15), [SpeedTest-Integration No Longer Loading](https://community.home-assistant.io/t/speedtest-integration-no-longer-loading/297167/42). 
 
 # Instructions
 ## Home Assistant 
